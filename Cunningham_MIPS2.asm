@@ -1,16 +1,10 @@
 #MIPS 2 Assignment Jarrett Cunningham
 
-
-
-
-
-
-
 .data #lets processor know that we will be submitting data to program
 
 
 
-userinput: .space 9 #Need space for a 8 digit hex
+userinput: .space 1001 #Need space for a 1000 digit hex
 
 prompt: .asciiz "Enter string: " 
 
@@ -21,6 +15,8 @@ invalid: .asciiz "\nInvalid hexadecimal number.\n"
 useroutput: .asciiz " "
 
 stringlenmess: .asciiz "\n The length of this string is: "
+
+nextline: .asciiz "\n"
 
 
 
@@ -52,7 +48,7 @@ main:
 
 	la $a0, userinput #loads the address of space and stores it into $a0
 
-	la $a1, 9 #gets the length of $a1 so theres no overflow
+	la $a1, 1001 #SPACE OF STRING
 
 	syscall 
 
@@ -82,7 +78,7 @@ main:
 
  jal getlength
 
- move $t5,$a0 #length is in $t5
+ move $t5,$t2 #length is in $t5
 
  move $s0,$t5 #length of string
 
@@ -90,20 +86,12 @@ main:
 
  li $t3,0 #initialize overall number for output
 
- li $t2,0
+li $t2,0
 li $t4,0
-li $t5,0
- la $a0,userinput #loading the users input
-
- jal subprogram2 #Function call to actually convert the integer
-
-printval:#printing overall value
-
-	 move $a0,$s3
-
-	 li $v0,1
-
-	 syscall
+la $a0,userinput #loading the users input
+start:
+jal subprogram_2 #Function call to actually convert the integer
+jal subprogram_3 #function to print
 
 exit: 
 
@@ -111,14 +99,22 @@ exit:
 
 	syscall #exits program
 
-	
-
-
-
 #FUNCTIONS USED IN THE MAIN FUNCTION
 
 
+######################################
+commas:
+lb $t7,0($a0) #start searching each byte
+beq $t7,44,exitcomma
+beq $t7,44,exitcomma
 
+jal subprogram_2
+jal subprogram_3
+
+exitcomma:
+li $t7,0
+jr $ra
+######################################
 ########################################Finding Length of String##########################################
 
 #li $t2,0 #initialize count to zero
@@ -139,9 +135,7 @@ getlength:
 
  exitgetlength:
 
- move $a0, $t2 
-
- jr $ra
+ #move $a0, $t2 
 
  #prints user input length
 
@@ -152,16 +146,13 @@ getlength:
 	syscall
 
 	
-
+move $a0,$t2
 	li $v0, 1 #opcode to print the length of the string
 
 	syscall 
 
-	
-
+ jr $ra	
 	#$a0 now has the length of the string
-
-	
 
 ##########################################################################################################
 
@@ -169,35 +160,42 @@ getlength:
 
  ####################SUBPROGRAM2 TO GET WHOLE STRING AND CONVERT TO DECIMAL#################################
 
- subprogram2: #loop for conversion
+ subprogram_2: #loop for conversion
 
 	lb $t1,0($a0) #start searching each byte
 
-	beq $t1,0,exitsubprogram2
+	beq $t1,0,exitsubprogram_2
 
-	beq $t1,10,exitsubprogram2
-
-	jal subprogram1
-
+	beq $t1,10,exitsubprogram_2
+	
 	addi $a0,$a0,1 #move to the next byte
 
 	sub $t5,$t5,1 #incrementing the length - 1
 
-	j subprogram2
+	jal subprogram_1
 
 	
 
-	exitsubprogram2:
+	j subprogram_2
+
+	
+
+	exitsubprogram_2:
 
 	move $s3,$t3 #save the overall value
 
 	bgt $s0,7,negnum
 
-	j printval
+	j subprogram_3
 
 #Accounting for 2 compliment
 
 	negnum:
+	la $a0, nextline #load the address of message from memory and store it into $a0
+
+	li $v0, 4 #opcode to print a string
+
+	syscall
 
 	li $t7,10000
 
@@ -235,9 +233,8 @@ getlength:
 
 #############################SUBPROGRAM1 TO CONVERT EACH LETTER INTO DECIMAL#################################
 
-subprogram1:
-li $t4,0
-li $t5,0
+subprogram_1:
+
 	#Checking if the byte falls into the ranges then will send byte to designated loop
 
 	blt $t1,48, Invalid 
@@ -309,7 +306,20 @@ li $t5,0
 	li $v0, 4 #opcode to print a string
 
 	syscall
+	
+	j start
 
-	jr $ra #RETURNS VALUE TO SUBP2
+	 #RETURNS VALUE TO SUBP2
 
 ###########################################################################################################################
+
+subprogram_3:#printing overall value
+
+	 move $a0,$s3
+
+	 li $v0,1
+
+	 syscall
+	 
+	 jr $ra
+
