@@ -18,9 +18,7 @@ stringlenmess: .asciiz "\n The length of this string is: "
 
 nextline: .asciiz "\n"
 
-
-
-
+comma: .asciiz ","
 
 .text
 
@@ -76,20 +74,8 @@ main:
 
   #Function call to pull in the length of the string
 
- jal getlength
 
- move $t5,$t2 #length is in $t5
 
- move $s0,$t5 #length of string
-
- li $t0,0 #initialize the i of this loop
-
- li $t3,0 #initialize overall number for output
-
-li $t2,0
-li $t4,0
-la $a0,userinput #loading the users input
-start:
 jal subprogram_2 #Function call to actually convert the integer
 jal subprogram_3 #function to print
 
@@ -103,17 +89,7 @@ exit:
 
 
 ######################################
-commas:
-lb $t7,0($a0) #start searching each byte
-beq $t7,44,exitcomma
-beq $t7,44,exitcomma
 
-jal subprogram_2
-jal subprogram_3
-
-exitcomma:
-li $t7,0
-jr $ra
 ######################################
 ########################################Finding Length of String##########################################
 
@@ -121,37 +97,50 @@ jr $ra
 
 getlength:
 
- lb $t0,0($a0)
+lb $t0,0($a0)
 
- beq $t0,0,exitgetlength
+beq $t0,0,exitgetlength
 
- beq $t0,10,exitgetlength
+beq $t0,44,exitgetlength #if there is a comma 
 
- addi $a0, $a0, 1
+addi $a0, $a0, 1
 
- addi $t2,$t2, 1
+addi $t2,$t2, 1
+ 
+beq $t0,9, spacelen #if theres a tab
 
- j getlength
+beq $t0,32, spacelen #if theres a space
 
- exitgetlength:
+j getlength
 
+spacelen:
+
+sub $t2,$t2,1
+
+j getlength
+ 
+exitgetlength: #t2 has the length of the string
+
+jr $ra	
  #move $a0, $t2 
 
  #prints user input length
 
-    la $a0, stringlenmess #print length premessage
+    #la $a0, stringlenmess #print length premessage
 
-	li $v0, 4 #opcode to print a string
+	#li $v0, 4 #opcode to print a string
 
-	syscall
-
+	#syscall
+#t2 has the length of the string
 	
-move $a0,$t2
-	li $v0, 1 #opcode to print the length of the string
+#move $a0,$t2
+#	li $v0, 1 #opcode to print the length of the string
 
-	syscall 
-
- jr $ra	
+#	syscall 
+#	la $a0, nextline
+#	li $v0,4
+#	syscall
+ 
 	#$a0 now has the length of the string
 
 ##########################################################################################################
@@ -161,33 +150,59 @@ move $a0,$t2
  ####################SUBPROGRAM2 TO GET WHOLE STRING AND CONVERT TO DECIMAL#################################
 
  subprogram_2: #loop for conversion
+ 
+ jal getlength
 
+move $t5,$t2 #length is in $t5
+
+#move $s0,$t5 #length of string
+
+#li $t0,0 #initialize the i of this loop
+#li $t3,0 #initialize overall number for output
+#li $t2,0
+#li $t4,0
+sub $a0,$a0,$t5
+
+startprog2:
+	
 	lb $t1,0($a0) #start searching each byte
 
-	beq $t1,0,exitsubprogram_2
+	beq $t1,0,exit #exit program completely
 
-	beq $t1,10,exitsubprogram_2
+	beq $t1,10,exit #exit the program completely
+	
+	beq $t1,44,commafunct #once the program hits a comma it will drop into the comma function, print the value, re initialize the variables and send it back to the top of sub prog 2
 	
 	addi $a0,$a0,1 #move to the next byte
+	
+	#move $s4, $a0
 
 	sub $t5,$t5,1 #incrementing the length - 1
-
+	
 	jal subprogram_1
 
-	
+	j startprog2
 
-	j subprogram_2
-
-	
-
-	exitsubprogram_2:
+	commafunct:
 
 	move $s3,$t3 #save the overall value
-
+	move $s4, $a0 #Address that the program left off from (the comma) will be loaded back into the a0 and then jump to the top of the subprogram 2 to redo the loop
 	bgt $s0,7,negnum
 
 	j subprogram_3
-
+	
+	li $t0,0 #initialize the i of this loop
+	
+	li $t2,0
+	
+	li $t3,0 #initialize overall number for output
+	
+	li $t4,0
+	
+	move $a0,$s4
+	addi $a0,$a0,1 #takes the register off of the comma and gears it up for the next loop
+	j subprogram_2 #gets the length of the next comma string and converts it
+	
 #Accounting for 2 compliment
 
 	negnum:
@@ -223,8 +238,6 @@ move $a0,$t2
 
 	syscall
 
-	
-
 	jr $ra
 
 #############################################################################################################
@@ -237,6 +250,10 @@ subprogram_1:
 
 	#Checking if the byte falls into the ranges then will send byte to designated loop
 
+
+	beq $t1,32, Space
+	beq $t1,9,Space
+	#beq $t1,44,Comma
 	blt $t1,48, Invalid 
 
 	blt $t1,58, Decimal
@@ -251,7 +268,27 @@ subprogram_1:
 
 	bgt $t1,102, Invalid
 
+	#Comma:
+	#will print current value of t4, reset t5 and t4, and print the comma
+	 #move $a0,$t3
+
+	 #li $v0,1
+
+	 #syscall
+	 
+	 #move $a0,$t1
+	 
+	 #li $v0,4
+	 
+	 #syscall
+	 
+	 #li $t4,0
+	 #li $t5,0
+	 
+	Space:
 	
+	addi $t5,$t5,1
+	j subprogram_2
 
 	Decimal:
 
@@ -307,7 +344,7 @@ subprogram_1:
 
 	syscall
 	
-	j start
+	j exit
 
 	 #RETURNS VALUE TO SUBP2
 
@@ -319,6 +356,12 @@ subprogram_3:#printing overall value
 
 	 li $v0,1
 
+	 syscall
+	 
+	 la $a0,comma
+	 
+	 li $v0,4
+	 
 	 syscall
 	 
 	 jr $ra
