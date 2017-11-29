@@ -2,15 +2,13 @@
 
 .data #lets processor know that we will be submitting data to program
 
-
-
 userinput: .space 1001 #Need space for a 1000 digit hex
 
 prompt: .asciiz "Enter string: " 
 
 outputmessage: .asciiz "\n The string you entered was "
 
-invalid: .asciiz "\nInvalid hexadecimal number.\n"
+invalid: .asciiz "NaN"
 
 useroutput: .asciiz " "
 
@@ -20,13 +18,11 @@ nextline: .asciiz "\n"
 
 comma: .asciiz ","
 
+sizemess: .asciiz "too large"
+
 .text
 
-
-
 main: 
-
-
 
 #prints prompt message
 
@@ -35,10 +31,6 @@ main:
 	li $v0, 4 #loading 4 into $v0 is the opcode to print a string
 
 	syscall #executes the previous commands
-
-	
-
-
 
 #storing user input
 
@@ -50,31 +42,19 @@ main:
 
 	syscall 
 
-
-
 #prints user input
 
-	la $a0, outputmessage #load the address of message from memory and store it into $a0
+#	la $a0, outputmessage #load the address of message from memory and store it into $a0
 
-	li $v0, 4 #opcode to print a string
+#3	li $v0, 4 #opcode to print a string
 
-	syscall 
+#	syscall 
 
-	la $a0, userinput #load address for the users input from memory and store it into $a0
+#	la $a0, userinput #load address for the users input from memory and store it into $a0
 
-	li $v0, 4 #opcode to print a string
+#	li $v0, 4 #opcode to print a string
 
-	syscall 	
-
-
-
-#Converting Userin into Decimal
-
-  
-
-  #Function call to pull in the length of the string
-
-
+#	syscall 	
 
 jal subprogram_2 #Function call to actually convert the integer
 jal subprogram_3 #function to print
@@ -85,27 +65,28 @@ exit:
 
 	syscall #exits program
 
+#END OF MAIN
+
 #FUNCTIONS USED IN THE MAIN FUNCTION
-
-
-######################################
 
 ######################################
 ########################################Finding Length of String##########################################
-
-#li $t2,0 #initialize count to zero
 
 getlength:
 
 lb $t0,0($a0)
 
-beq $t0,0,exitgetlength
+beq $t0,0,exit
 
 beq $t0,44,exitgetlength #if there is a comma 
+
+beq $t0,10,exitgetlength
 
 addi $a0, $a0, 1
 
 addi $t2,$t2, 1
+
+move $s6,$t2 #this will be later used for if there is a 2s complement problem
  
 beq $t0,9, spacelen #if theres a tab
 
@@ -118,36 +99,31 @@ spacelen:
 sub $t2,$t2,1
 
 j getlength
- 
+
 exitgetlength: #t2 has the length of the string
+bgt $t2,8,printlarge
+#move $s5,$a0
 
-jr $ra	
- #move $a0, $t2 
+jr $ra
 
- #prints user input length
+printlarge:
+move $s5,$a0 #store the address value
+la $a0,sizemess
+li $v0,4
+syscall
 
-    #la $a0, stringlenmess #print length premessage
+la $a0,comma
+li $v0,4
+syscall
 
-	#li $v0, 4 #opcode to print a string
-
-	#syscall
-#t2 has the length of the string
-	
-#move $a0,$t2
-#	li $v0, 1 #opcode to print the length of the string
-
-#	syscall 
-#	la $a0, nextline
-#	li $v0,4
-#	syscall
- 
-	#$a0 now has the length of the string
+li $t2,0
+move $a0,$s5
+addi $a0,$a0,1
+j getlength
 
 ##########################################################################################################
 
- 
-
- ####################SUBPROGRAM2 TO GET WHOLE STRING AND CONVERT TO DECIMAL#################################
+####################SUBPROGRAM2 TO GET WHOLE STRING AND CONVERT TO DECIMAL#################################
 
  subprogram_2: #loop for conversion
  
@@ -155,12 +131,6 @@ jr $ra
 
 move $t5,$t2 #length is in $t5
 
-#move $s0,$t5 #length of string
-
-#li $t0,0 #initialize the i of this loop
-#li $t3,0 #initialize overall number for output
-#li $t2,0
-#li $t4,0
 sub $a0,$a0,$t5
 
 startprog2:
@@ -169,27 +139,28 @@ startprog2:
 
 	beq $t1,0,exit #exit program completely
 
-	beq $t1,10,exit #exit the program completely
+	beq $t1,10,exitnprint #exit the program completely
 	
 	beq $t1,44,commafunct #once the program hits a comma it will drop into the comma function, print the value, re initialize the variables and send it back to the top of sub prog 2
 	
 	addi $a0,$a0,1 #move to the next byte
 	
-	#move $s4, $a0
-
 	sub $t5,$t5,1 #incrementing the length - 1
 	
 	jal subprogram_1
 
 	j startprog2
 
+
 	commafunct:
 
 	move $s3,$t3 #save the overall value
+	
 	move $s4, $a0 #Address that the program left off from (the comma) will be loaded back into the a0 and then jump to the top of the subprogram 2 to redo the loop
-	bgt $s0,7,negnum
+	
+	#bgt $s6,7,negnum
 
-	j subprogram_3
+	jal subprogram_3
 	
 	li $t0,0 #initialize the i of this loop
 	
@@ -200,11 +171,19 @@ startprog2:
 	li $t4,0
 	
 	move $a0,$s4
+	
 	addi $a0,$a0,1 #takes the register off of the comma and gears it up for the next loop
-	j subprogram_2 #gets the length of the next comma string and converts it
+	
+	j subprogram_2 
 	
 #Accounting for 2 compliment
-
+        exitnprint:
+      #  bgt $s6,7,negnum
+        move $a0, $t3
+        li $v0,1
+        syscall
+        j exit
+	
 	negnum:
 	la $a0, nextline #load the address of message from memory and store it into $a0
 
@@ -218,8 +197,6 @@ startprog2:
 
 	divu $t3,$t3,$t7
 
-	
-
 	mflo $t7
 
 	move $a0,$t7
@@ -227,8 +204,6 @@ startprog2:
 	li $v0,1
 
 	syscall
-
-	
 
 	mfhi $t7
 
@@ -238,11 +213,9 @@ startprog2:
 
 	syscall
 
-	jr $ra
+	j subprogram_2
 
 #############################################################################################################
-
-
 
 #############################SUBPROGRAM1 TO CONVERT EACH LETTER INTO DECIMAL#################################
 
@@ -253,7 +226,7 @@ subprogram_1:
 
 	beq $t1,32, Space
 	beq $t1,9,Space
-	#beq $t1,44,Comma
+	
 	blt $t1,48, Invalid 
 
 	blt $t1,58, Decimal
@@ -267,27 +240,11 @@ subprogram_1:
 	blt $t1,103, Lowercase
 
 	bgt $t1,102, Invalid
-
-	#Comma:
-	#will print current value of t4, reset t5 and t4, and print the comma
-	 #move $a0,$t3
-
-	 #li $v0,1
-
-	 #syscall
-	 
-	 #move $a0,$t1
-	 
-	 #li $v0,4
-	 
-	 #syscall
-	 
-	 #li $t4,0
-	 #li $t5,0
 	 
 	Space:
 	
 	addi $t5,$t5,1
+	
 	j subprogram_2
 
 	Decimal:
@@ -303,12 +260,9 @@ subprogram_1:
 	jr $ra
 
 	
-
 	Uppercase:
 
 	sub $t1,$t1,55 #subtract 55 to get the decimal number of the byte being checked
-
-	#addi $t1, $t1, 10 #Adding 10
 
 	sll $t4,$t5,2 #shifting for the exponent value
 
@@ -344,7 +298,15 @@ subprogram_1:
 
 	syscall
 	
-	j exit
+	la $a0,comma
+        li $v0,4
+        syscall
+	
+	move $a0,$s5
+	
+	addi $a0,$a0,1
+	
+	j subprogram_2
 
 	 #RETURNS VALUE TO SUBP2
 
