@@ -1,5 +1,6 @@
 #MIPS 2 Assignment Jarrett Cunningham
 
+
 .data #lets processor know that we will be submitting data to program
 
 userinput: .space 1001 #Need space for a 1000 digit hex
@@ -150,15 +151,25 @@ startprog2:
 	jal subprogram_1
 
 	j startprog2
+	
+	exitnprint:
+        bgt $s6,7,negnum
+        
+        move $a0, $t3
+        
+        li $v0,1
+        
+        syscall
+        j exit
 
-
+################################################If the function encounters a comma it will save the address, print out the value thats currently stored, print a comma, then reset for the next set of numbers#########
 	commafunct:
 
 	move $s3,$t3 #save the overall value
 	
 	move $s4, $a0 #Address that the program left off from (the comma) will be loaded back into the a0 and then jump to the top of the subprogram 2 to redo the loop
 	
-	#bgt $s6,7,negnum
+	bgt $s6,7,negnumcom
 
 	jal subprogram_3
 	
@@ -175,46 +186,9 @@ startprog2:
 	addi $a0,$a0,1 #takes the register off of the comma and gears it up for the next loop
 	
 	j subprogram_2 
+##############################################################################################################################################################################	
+      
 	
-#Accounting for 2 compliment
-        exitnprint:
-      #  bgt $s6,7,negnum
-        move $a0, $t3
-        li $v0,1
-        syscall
-        j exit
-	
-	negnum:
-	la $a0, nextline #load the address of message from memory and store it into $a0
-
-	li $v0, 4 #opcode to print a string
-
-	syscall
-
-	li $t7,10000
-
-	move $t3,$s3
-
-	divu $t3,$t3,$t7
-
-	mflo $t7
-
-	move $a0,$t7
-
-	li $v0,1
-
-	syscall
-
-	mfhi $t7
-
-	move $a0,$t7
-
-	li $v0,1
-
-	syscall
-
-	j subprogram_2
-
 #############################################################################################################
 
 #############################SUBPROGRAM1 TO CONVERT EACH LETTER INTO DECIMAL#################################
@@ -225,6 +199,7 @@ subprogram_1:
 
 
 	beq $t1,32, Space
+	
 	beq $t1,9,Space
 	
 	blt $t1,48, Invalid 
@@ -272,8 +247,6 @@ subprogram_1:
 
 	jr $ra
 
-	
-
 	Lowercase:
 
 	sub $t1,$t1,97 #subtract 87 to get the decimal number of the byte being checked
@@ -291,6 +264,7 @@ subprogram_1:
 	
 
 	Invalid: #print invalid message and exit the loop
+	move $s5,$a0
 
  	la $a0, invalid #print length premessage
 
@@ -306,11 +280,10 @@ subprogram_1:
 	
 	addi $a0,$a0,1
 	
-	j subprogram_2
+	j startprog2
 
-	 #RETURNS VALUE TO SUBP2
 
-###########################################################################################################################
+######################################SUBPROGRAM_3: PRINTING OUT VALUE#####################################################################################
 
 subprogram_3:#printing overall value
 
@@ -327,4 +300,77 @@ subprogram_3:#printing overall value
 	 syscall
 	 
 	 jr $ra
+	 
+####################################Accounting for 2 complement########################################################################
+negnumcom:#accounting for negative number with a comma next to it
 
+	li $t7,10000
+
+	move $t6,$t3
+
+	divu $t6,$t6,$t7
+
+	mflo $t7
+
+	move $a0,$t7
+
+	li $v0,1
+
+	syscall
+
+	mfhi $t7
+
+	move $a0,$t7
+
+	li $v0,1
+
+	syscall
+	
+	la $a0,comma
+	 
+	 li $v0,4
+	 
+	 syscall
+	
+	li $t0,0 #initialize the i of this loop
+	
+	li $t2,0
+	
+	li $t3,0 #initialize overall number for output
+	
+	li $t4,0
+	
+	li $t6,0
+	
+	move $a0,$s4
+	
+	addi $a0,$a0,1 #takes the register off of the comma and gears it up for the next loop
+
+	j subprogram_2
+	
+	negnum:
+
+	li $t7,10000
+
+	move $t6,$t3
+
+	divu $t6,$t6,$t7
+
+	mflo $t7
+
+	move $a0,$t7
+
+	li $v0,1
+
+	syscall
+
+	mfhi $t7
+
+	move $a0,$t7
+
+	li $v0,1
+
+	syscall
+
+	j exit
+#########################################################################################################################
