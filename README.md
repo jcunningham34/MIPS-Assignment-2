@@ -6,3 +6,4 @@
 5th Commit: The program can now output correct decimal values with spaces and tabs, now need to work on commas
 6th Commit: Program has the comma function and now we just need to debug
 7th Commit:Program can work with commas, spaces, and everything else needed to fulfill the requirements. Now its not correcting the two complement, but the program is almost done.
+8th Commit: Program can work with 2s complement, now need to figure out printing invalid for, empty strings, spaces inside of the integer
